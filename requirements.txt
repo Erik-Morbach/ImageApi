@@ -4,3 +4,4 @@ gunicorn
 opencv-python-headless
 numpy
 imutils
+python-multipart
