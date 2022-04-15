@@ -5,6 +5,9 @@ from fastapi.responses import StreamingResponse
 from fastapi.exceptions import HTTPException
 from model.rotate import Rotate
 from model.rescale import Rescale
+from model.blur import Blur
+from model.negate import Negate
+from model.blacknwhite import BWTransform
 import cv2
 
 router = APIRouter(prefix="/operation")
@@ -28,5 +31,31 @@ def rescale(scale: float | None = None, scale_x: float | None = None,
         scale_y = scale
 
     image = Rescale().execute(image[0], scale_x=scale_x, scale_y=scale_y)
+    res, image = cv2.imencode(".png", image)
+    return StreamingResponse(io.BytesIO(image.tobytes()), media_type="image/png")
+
+
+@router.post("/blur/")
+def blur(intensity: float = None,
+         image: list[bytes] = File(...)):
+    if not (0 <= intensity <= 1):
+        return HTTPException(status_code=400, detail="Intensity out of range")
+    ksize = [max(1, int(intensity*100))]*2
+    anchor = -1, -1
+    image = Blur().execute(image[0], ksize=ksize, anchor=anchor)
+    res, image = cv2.imencode(".png", image)
+    return StreamingResponse(io.BytesIO(image.tobytes()), media_type="image/png")
+
+
+@router.post("/negate/")
+def negate(image: list[bytes] = File(...)):
+    image = Negate().execute(image[0])
+    res, image = cv2.imencode(".png", image)
+    return StreamingResponse(io.BytesIO(image.tobytes()), media_type="image/png")
+
+
+@router.post("/bwtransform/")
+def black_n_white_transform(image: list[bytes] = File(...)):
+    image = BWTransform().execute(image[0])
     res, image = cv2.imencode(".png", image)
     return StreamingResponse(io.BytesIO(image.tobytes()), media_type="image/png")
